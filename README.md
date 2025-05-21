@@ -1,7 +1,7 @@
 # Unsupervised Characterization of Rain-Induced Seismic Noise in Urban Fiber-Optic Networks Using Deep Embedded Clustering
 
 ## Introduction
-This repo contains the codes to reproduced figures in the paper. 
+This repo contains the codes to generate figures in the paper: Shen, J., and Zhu, T. (2025). Unsupervised Characterization of Rain-Induced Seismic Noise in Urban Fiber-Optic Networks Using Deep Embedded Clustering, submitted to Water Resources Research.
 
 ![](figure/DEC.png)
 Fig. 1 Deep learning model architecture
@@ -14,4 +14,4 @@ Fig. 1 Deep learning model architecture
 * model_DEC.py: Modules of the architecture of DEC model.
 * DEC_utils.py: Other functions for data processing.
 * config.py: parameter file
-* **data**: saved weights of final model and predictions from all continous data
+* **data**: saved weights of final model and predictions from all continous data. *Raw/processed DAS data are not included due to their large file size.* 
