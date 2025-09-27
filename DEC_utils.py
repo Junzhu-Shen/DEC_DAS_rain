@@ -1,10 +1,61 @@
-import sys
-sys.path.append('../')
-import foreseeTools as das
-
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import signal
+
+def smoothNyquist(type,Xi,Yi,samplingRate,octaveWindowWidth,octaveWindowShift,xLimit):
+    import math
+    X  = []
+    Y  = []
+    #
+    # shortest period (highest frequency) center of the window
+    # starts  at the Nyquist
+    #
+    windowWidth = octaveWindowWidth
+    halfWindow  = float(windowWidth / 2.0)
+    windowShift = octaveWindowShift
+    shift       = math.pow(2.0,windowShift)        # shift of each Fc
+
+    #
+    # the first center X at the Nyquist
+    #
+    if type == "frequency":
+        Xc = float(samplingRate) / float(2.0) # Nyquist frequency
+    else:
+        Xc = float(2.0) /float(samplingRate)  # Nyquist period
+
+    while (True):
+        #
+        # do not go below the minimum frequency
+        # do not go above the maximum period
+        #
+        if (type == "frequency" and Xc < xLimit) or (type == "period" and Xc > xLimit):
+            break
+
+        thisBin = getBin(Xi,Yi,Xc,halfWindow)
+
+        #
+        # bin should not be empty
+        #
+        if (len(thisBin) > 0):
+            Y.append(np.mean(thisBin))
+            X.append(Xc)
+        else:
+            Y.append(float('NAN'))
+            X.append(Xc)
+
+        #
+        # move the center frequency to the right by half of the windowWidth
+        # move the center period to the left by half of the windowWidth
+        #
+        if type == "frequency":
+            Xc /= shift
+        else:
+            Xc *= shift
+    #
+    # sort on X and return
+    #
+    X,Y = (list(t) for t in zip(*sorted(zip(X,Y))))
+    return (X,Y)
 
 def get_stft_freq():
     """ Get actual frequency labels for frequency samples """
@@ -12,7 +63,7 @@ def get_stft_freq():
     # original frequency
     f, t, Zxx = signal.stft(X, fs=250, nperseg = 512)
     # frequency bins using 1/16 octave intervals
-    subfreq = np.array(das.smoothNyquist('frequency',[],[],250,1/8,1/16,1))[0][:-1]
+    subfreq = np.array(smoothNyquist('frequency',[],[],250,1/8,1/16,1))[0][:-1]
     subfreq = np.flip(subfreq)
     # Double check if there is frequency samples within each bin (xl - xu)
     shift = np.power(2, 1/32)
@@ -28,6 +79,27 @@ def get_stft_freq():
             freq.append(subfreq[i])
     freq = np.array(freq)
     return freq
+
+def getBin(X,Y,Xc,octaveHalfWindow):
+    import math
+    thisBin = []
+    shift = math.pow(2.0,octaveHalfWindow)
+    #
+    # the bin is octaveHalfWindow around Xc
+    #
+    X1 = Xc / shift
+    X2 = Xc * shift
+    Xs = min(X1,X2)
+    Xe = max(X1,X2)
+
+    #
+    # gather the values that fall within the range >=Xs and <= Xe
+    #
+    for i in range(0,len(X)):
+        if X[i] >= Xs and X[i] <= Xe:
+            thisBin.append(float(Y[i]))
+
+    return thisBin
 
 def switch_label(y_old, old):
     """
@@ -65,3 +137,7 @@ def fft_taper(data):
     from obspy.signal.invsim import cosine_taper
     data *= cosine_taper(len(data), 0.2)
     return data
+
+def cal_energy(xf, PSD, f1, f2):
+    energy = np.sqrt(np.trapz(PSD[np.where((xf>=f1) & (xf<=f2))], xf[np.where((xf>=f1) & (xf<=f2))]))
+    return energy
